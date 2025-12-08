@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CompanionChat – Elderly Care</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", system-ui, sans-serif; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #ffb74d, #ff8a65, #ffe082);
+      padding: 20px;
+    }
+    .app {
+      width: 100%;
+      max-width: 950px;
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .icon-circle {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 20%, #fffde7, #ff7043);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(255, 112, 67, 0.6);
+    }
+    h1 {
+      font-size: 24px;
+      color: #e65100;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: #6d4c41;
+    }
+    .safety-tag {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #fff3e0;
+      color: #6d4c41;
+      border: 1px solid #ffe0b2;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 3fr 2fr;
+      gap: 16px;
+      margin-top: 10px;
+    }
+    .card {
+      background: #fffaf3;
+      padding: 14px;
+      border-radius: 16px;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+    }
+    .card h2 {
+      font-size: 18px;
+      margin-bottom: 6px;
+      color: #bf360c;
+    }
+    .card small {
+      font-size: 12px;
+      color: #8d6e63;
+    }
+
+    /* Chat area */
+    .chat-window {
+      margin-top: 10px;
+      border-radius: 14px;
+      background: #fff;
+      border: 1px solid #ffe0b2;
+      padding: 10px;
+      height: 260px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+    .msg-row {
+      margin-bottom: 10px;
+      display: flex;
+    }
+    .msg-row.me { justify-content: flex-end; }
+    .msg-row.bot { justify-content: flex-start; }
+    .bubble {
+      max-width: 80%;
+      padding: 8px 12px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.4;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .bubble.me {
+      background: linear-gradient(135deg, #ff7043, #ffb74d);
+      color: #fff;
+      border-bottom-right-radius: 2px;
+    }
+    .bubble.bot {
+      background: #fff3e0;
+      color: #4e342e;
+      border-bottom-left-radius: 2px;
+    }
+    .chat-meta {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #8d6e63;
+      display: flex;
+      justify-content: space-between;
+    }
+    .chat-input-area {
+      display: flex;
+      margin-top: 10px;
+      gap: 8px;
+    }
+    .chat-input-area textarea {
+      flex: 1;
+      resize: none;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid #ffe0b2;
+      font-size: 14px;
+      height: 50px;
+    }
+
+    /* Reminders */
+    .reminder-form {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 14px;
+    }
+    .reminder-form input,
+    .reminder-form textarea {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #ffe0b2;
+      padding: 7px 9px;
+      font-size: 14px;
+    }
+    .reminder-form textarea {
+      resize: vertical;
+      min-height: 50px;
+    }
+    .reminder-meta {
+      display: flex;
+      gap: 6px;
+      margin-top: 2px;
+    }
+    .reminder-meta input {
+      flex: 1;
+    }
+    .reminder-list {
+      margin-top: 10px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .reminder-item {
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      border-radius: 12px;
+      background: #fff8e1;
+      border-left: 4px solid #ffb300;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 13px;
+    }
+    .reminder-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+    .reminder-title {
+      font-weight: 600;
+      color: #5d4037;
+    }
+    .reminder-time {
+      font-size: 11px;
+      color: #8d6e63;
+    }
+    .reminder-notes {
+      font-size: 12px;
+      color: #6d4c41;
+    }
+    .reminder-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #8d6e63;
+    }
+
+    /* Buttons */
+    button {
+      border: none;
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 14px;
+      transition: transform 0.15s, box-shadow 0.15s, background 0.2s;
+    }
+    .btn-main {
+      background: linear-gradient(135deg, #ff7043, #ffb74d);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 3px 9px rgba(255, 112, 67, 0.5);
+    }
+    .btn-main:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 112, 67, 0.7);
+    }
+    .btn-soft {
+      background: #ffe0b2;
+      color: #4e342e;
+    }
+    .btn-soft:hover { background: #ffcc80; }
+
+    /* Stats row */
+    .stats-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      font-size: 12px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: #fff3e0;
+      color: #6d4c41;
+    }
+
+    @media (max-width: 780px) {
+      .layout { grid-template-columns: 1fr; }
+      .app { padding: 16px; }
+      header { flex-direction: column; gap: 6px; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="title">
+        <div class="icon-circle">🤝</div>
+        <div>
+          <h1>CompanionChat – Elderly Care</h1>
+          <div class="subtitle">Simple communication and gentle reminders for elders living alone</div>
+        </div>
+      </div>
+      <div class="safety-tag">Large buttons • Clear text • Warm colors</div>
+    </header>
+
+    <div class="layout">
+      <!-- LEFT: Chat -->
+      <div class="card">
+        <h2>Family Chat</h2>
+        <small>Send simple messages and receive friendly replies.</small>
+
+        <div class="chat-window" id="chatWindow">
+          <!-- Initial messages -->
+          <div class="msg-row bot">
+            <div class="bubble bot">
+              Hello! I am your CompanionChat. I’ll help you stay in touch and remember important things. 💛
+            </div>
+          </div>
+          <div class="msg-row bot">
+            <div class="bubble bot">
+              You can type a short message below and press <b>Send</b>.
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-meta">
+          <span id="lastSeen">Companion is online</span>
+          <span id="messageCount">Messages today: 0</span>
+        </div>
+
+        <div class="chat-input-area">
+          <textarea id="chatInput" placeholder="Type a simple message…"></textarea>
+          <button class="btn-main" id="sendBtn">Send</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: Reminders -->
+      <div class="card">
+        <h2>Gentle Reminders</h2>
+        <small>Keep track of medicines, water, walks, and calls.</small>
+
+        <div class="reminder-form">
+          <input type="text" id="reminderTitle" placeholder="Reminder title (e.g. Morning medicine)" />
+          <div class="reminder-meta">
+            <input type="time" id="reminderTime" />
+            <input type="date" id="reminderDate" />
+          </div>
+          <textarea id="reminderNotes" placeholder="Notes (e.g. Take after breakfast with water)"></textarea>
+          <button class="btn-soft" id="addReminderBtn">Add Reminder</button>
+        </div>
+
+        <div class="stats-row">
+          <div class="pill" id="reminderCount">Reminders set: 0</div>
+          <div class="pill" id="completedCount">Completed today: 0</div>
+          <div class="pill" id="nextReminder">Next reminder: —</div>
+        </div>
+
+        <div class="reminder-list" id="reminderList">
+          <!-- Reminders will appear here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- CHAT LOGIC ----------
+    const chatWindow = document.getElementById("chatWindow");
+    const chatInput = document.getElementById("chatInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const lastSeen = document.getElementById("lastSeen");
+    const messageCountEl = document.getElementById("messageCount");
+
+    let messageCount = 0;
+
+    function addMessage(text, who) {
+      const row = document.createElement("div");
+      row.className = "msg-row " + (who === "me" ? "me" : "bot");
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble " + (who === "me" ? "me" : "bot");
+      bubble.textContent = text;
+      row.appendChild(bubble);
+
+      chatWindow.appendChild(row);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function companionReply(userText) {
+      // Simple friendly auto replies for demo
+      let reply = "Thank you for your message. I am here with you. 💛";
+      if (userText.toLowerCase().includes("medicine"))
+        reply = "Don’t forget to take your medicine with water. I’m proud of you for taking care of yourself. 🌼";
+      else if (userText.toLowerCase().includes("water"))
+        reply = "Great idea! Drinking water keeps you healthy. Take small sips now. 🚰";
+      else if (userText.toLowerCase().includes("walk"))
+        reply = "A short walk is wonderful. Walk slowly and safely. 👟";
+      else if (userText.toLowerCase().includes("hello") || userText.toLowerCase().includes("hi"))
+        reply = "Hello dear! I hope you’re having a calm and happy day. 😊";
+
+      setTimeout(() => {
+        addMessage(reply, "bot");
+        lastSeen.textContent = "Companion replied just now";
+      }, 700);
+    }
+
+    function sendChat() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+      addMessage(text, "me");
+      chatInput.value = "";
+      messageCount++;
+      messageCountEl.textContent = "Messages today: " + messageCount;
+      lastSeen.textContent = "You sent a message just now";
+      companionReply(text);
+    }
+
+    sendBtn.addEventListener("click", sendChat);
+    chatInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendChat();
+      }
+    });
+
+    // ---------- REMINDER LOGIC ----------
+    const reminderTitle = document.getElementById("reminderTitle");
+    const reminderTime = document.getElementById("reminderTime");
+    const reminderDate = document.getElementById("reminderDate");
+    const reminderNotes = document.getElementById("reminderNotes");
+    const addReminderBtn = document.getElementById("addReminderBtn");
+    const reminderList = document.getElementById("reminderList");
+    const reminderCountEl = document.getElementById("reminderCount");
+    const completedCountEl = document.getElementById("completedCount");
+    const nextReminderEl = document.getElementById("nextReminder");
+
+    let reminders = [];
+    let completedCount = 0;
+
+    function updateReminderStats() {
+      reminderCountEl.textContent = "Reminders set: " + reminders.length;
+      completedCountEl.textContent = "Completed today: " + completedCount;
+
+      if (reminders.length === 0) {
+        nextReminderEl.textContent = "Next reminder: —";
+        return;
+      }
+
+      // Simple: pick first reminder that is not done
+      const upcoming = reminders.find((r) => !r.done);
+      if (upcoming) {
+        nextReminderEl.textContent =
+          "Next reminder: " + (upcoming.time || "Anytime") + " on " + (upcoming.date || "Today");
+      } else {
+        nextReminderEl.textContent = "Next reminder: All done 🎉";
+      }
+    }
+
+    function renderReminders() {
+      reminderList.innerHTML = "";
+      reminders.forEach((r) => {
+        const div = document.createElement("div");
+        div.className = "reminder-item";
+        if (r.done) {
+          div.style.opacity = "0.6";
+          div.style.background = "#e8f5e9";
+          div.style.borderLeftColor = "#66bb6a";
+        }
+
+        const top = document.createElement("div");
+        top.className = "reminder-top";
+
+        const title = document.createElement("div");
+        title.className = "reminder-title";
+        title.textContent = r.title;
+
+        const time = document.createElement("div");
+        time.className = "reminder-time";
+        time.textContent = (r.time || "Anytime") + " • " + (r.date || "Today");
+
+        top.appendChild(title);
+        top.appendChild(time);
+
+        const notes = document.createElement("div");
+        notes.className = "reminder-notes";
+        notes.textContent = r.notes || "No extra notes";
+
+        const footer = document.createElement("div");
+        footer.className = "reminder-footer";
+
+        const status = document.createElement("span");
+        status.textContent = r.done ? "Status: Completed" : "Status: Pending";
+
+        const btn = document.createElement("button");
+        btn.className = "btn-main";
+        btn.style.padding = "6px 12px";
+        btn.style.fontSize = "12px";
+        btn.textContent = r.done ? "Mark as pending" : "Mark as done";
+
+        btn.addEventListener("click", () => {
+          r.done = !r.done;
+          if (r.done) completedCount++;
+          else completedCount = Math.max(0, completedCount - 1);
+          renderReminders();
+          updateReminderStats();
+        });
+
+        footer.appendChild(status);
+        footer.appendChild(btn);
+
+        div.appendChild(top);
+        div.appendChild(notes);
+        div.appendChild(footer);
+        reminderList.prepend(div); // latest on top
+      });
+    }
+
+    function addReminder() {
+      const title = reminderTitle.value.trim() || "Simple reminder";
+      const time = reminderTime.value;
+      const date = reminderDate.value;
+      const notes = reminderNotes.value.trim();
+
+      reminders.push({ title, time, date, notes, done: false });
+      reminderTitle.value = "";
+      reminderTime.value = "";
+      reminderDate.value = "";
+      reminderNotes.value = "";
+
+      renderReminders();
+      updateReminderStats();
+    }
+
+    addReminderBtn.addEventListener("click", addReminder);
+
+    // Initial stats
+    updateReminderStats();
+  </script>
+</body>
+</html>

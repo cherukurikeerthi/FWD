@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>EventPrep Sports — Manage events, trainings & results</title>
+  <style>
+    :root{--accent:#0b7cff;--muted:#666}
+    body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin:0; background:#f6f8fb; color:#111}
+    header{background:white;box-shadow:0 2px 6px rgba(20,30,50,.06);padding:18px 22px;display:flex;gap:16px;align-items:center}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#2dd4bf);display:flex;align-items:center;justify-content:center;color:white;font-weight:700}
+    h1{font-size:18px;margin:0}
+
+    .container{max-width:1100px;margin:22px auto;padding:18px}
+    .card{background:white;border-radius:10px;padding:16px;box-shadow:0 6px 18px rgba(20,30,50,.04);}
+
+    /* Tabs */
+    .tabs{display:flex;gap:8px;margin-bottom:14px}
+    .tab{padding:8px 14px;border-radius:8px;cursor:pointer;color:var(--muted)}
+    .tab.active{background:linear-gradient(90deg,#eef6ff,#f7fffb);color:var(--accent);font-weight:600}
+
+    /* layout */
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+    .full{grid-column:1/-1}
+
+    /* list */
+    .list{display:flex;flex-direction:column;gap:8px}
+    .item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;border:1px solid #eef2f7}
+    .meta{font-size:13px;color:var(--muted)}
+
+    /* forms */
+    label{display:block;font-size:13px;margin-bottom:6px}
+    input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #dde6f2;background:#fbfdff}
+    .row{display:flex;gap:10px}
+    .row .col{flex:1}
+
+    .btn{display:inline-block;padding:8px 12px;border-radius:8px;background:var(--accent);color:white;font-weight:600;border:none;cursor:pointer}
+    .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(11,124,255,.12)}
+    .btn.danger{background:#ff6b6b}
+
+    footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+    @media (max-width:900px){.grid{grid-template-columns:1fr;}.logo{display:none}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">EP</div>
+      <div>
+        <h1>EventPrep Sports</h1>
+        <div style="font-size:13px;color:var(--muted)">Manage events · training sessions · results dashboard</div>
+      </div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <button class="btn" id="btnAddEvent">+ New Event</button>
+      <button class="btn ghost" id="btnExport">Export CSV</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <div class="tabs" role="tablist">
+        <div class="tab active" data-tab="events">Events</div>
+        <div class="tab" data-tab="trainings">Trainings</div>
+        <div class="tab" data-tab="results">Results</div>
+      </div>
+
+      <div class="grid">
+        <!-- LEFT: Main content that changes per tab -->
+        <section id="panel" class="card" style="min-height:320px"></section>
+
+        <!-- RIGHT: Quick summary / filters -->
+        <aside class="card">
+          <h3 style="margin-top:0">Quick summary</h3>
+          <div id="summaryList" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
+          <hr style="margin:12px 0;border:none;border-top:1px solid #eef2f7">
+          <div>
+            <label>Search</label>
+            <input id="search" placeholder="search events, teams, sessions..." />
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button class="btn ghost" id="btnClear">Clear Data</button>
+            <button class="btn" id="btnImportSample">Load Sample</button>
+          </div>
+        </aside>
+
+        <!-- full-width footer area for charts or details -->
+        <div class="full card" id="bottomArea" style="margin-top:12px">
+          <h3 style="margin-top:0">Performance chart</h3>
+          <canvas id="resultsChart" width="800" height="220"></canvas>
+        </div>
+      </div>
+
+    </div>
+    <footer>Built with ❤️ — Save the file as <code>index.html</code> and open it in your browser.</footer>
+  </main>
+
+  <script>
+    // Simple single-file app: localStorage-backed lists for events, trainings, results
+    const LS_KEY = 'eventprep:data-v1'
+    let state = {events:[], trainings:[], results:[]}
+
+    // elements
+    const panel = document.getElementById('panel')
+    const tabs = Array.from(document.querySelectorAll('.tab'))
+    const btnAddEvent = document.getElementById('btnAddEvent')
+    const btnExport = document.getElementById('btnExport')
+    const btnClear = document.getElementById('btnClear')
+    const btnImportSample = document.getElementById('btnImportSample')
+    const search = document.getElementById('search')
+    const summaryList = document.getElementById('summaryList')
+
+    // init
+    function load(){
+      try{const raw = localStorage.getItem(LS_KEY); if(raw) state = JSON.parse(raw)}catch(e){console.warn(e)}
+      renderTab('events')
+      renderSummary()
+      drawChart()
+    }
+
+    function save(){localStorage.setItem(LS_KEY, JSON.stringify(state)); renderSummary(); drawChart()}
+
+    // Tabs
+    tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));t.classList.add('active');renderTab(t.dataset.tab)}))
+
+    function renderTab(name){
+      if(name==='events') renderEvents()
+      if(name==='trainings') renderTrainings()
+      if(name==='results') renderResults()
+    }
+
+    // EVENTS
+    function renderEvents(){
+      panel.innerHTML = `
+        <h2 style="margin-top:0">Events</h2>
+        <div style="display:flex;gap:10px;margin-bottom:12px">
+          <input id="filterDate" type="date" style="flex:0 0 180px" />
+          <input id="filterText" placeholder="filter by name or location" style="flex:1" />
+          <button class="btn" id="btnNewEventSmall">Create</button>
+        </div>
+        <div class="list" id="eventsList"></div>
+      `
+      document.getElementById('btnNewEventSmall').onclick = ()=>openEventForm()
+      document.getElementById('filterText').oninput = e=>renderEventsList(e.target.value)
+      renderEventsList('')
+    }
+
+    function renderEventsList(filter){
+      const el = document.getElementById('eventsList')
+      el.innerHTML = ''
+      const q = (filter||search.value||'').toLowerCase()
+      const items = state.events.filter(ev=>!q || (ev.name+ev.location+ev.date).toLowerCase().includes(q))
+      if(items.length===0) el.innerHTML = '<div class="meta">No events yet — create one.</div>'
+      items.forEach(ev=>{
+        const node = document.createElement('div'); node.className='item'
+        node.innerHTML = `<div>
+            <div style="font-weight:700">${ev.name}</div>
+            <div class="meta">${ev.date} · ${ev.location}</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn ghost" data-id="${ev.id}" data-action="edit">Edit</button>
+            <button class="btn" data-id="${ev.id}" data-action="sessions">Sessions</button>
+            <button class="btn danger" data-id="${ev.id}" data-action="delete">Del</button>
+          </div>`
+        el.appendChild(node)
+      })
+      el.querySelectorAll('button').forEach(b=>b.addEventListener('click',ev=>{
+        const id = b.dataset.id
+        if(b.dataset.action==='edit') openEventForm(id)
+        if(b.dataset.action==='sessions') openSessionsForEvent(id)
+        if(b.dataset.action==='delete') {state.events = state.events.filter(x=>x.id!==id);save();renderEventsList(filter)}
+      }))
+    }
+
+    function openEventForm(id){
+      const editing = state.events.find(e=>e.id===id) || {id:'evt_'+Date.now(),name:'',date:'',location:'',notes:''}
+      panel.innerHTML = `<h2>${id? 'Edit Event':'New Event'}</h2>
+        <div style="display:grid;gap:8px">
+          <label>Name<input id="evtName" value="${escapeHtml(editing.name)}"/></label>
+          <div class="row"><div class="col"><label>Date<input id="evtDate" type="date" value="${editing.date}"/></label></div><div class="col"><label>Location<input id="evtLoc" value="${escapeHtml(editing.location)}"/></label></div></div>
+          <label>Notes<textarea id="evtNotes">${escapeHtml(editing.notes)}</textarea></label>
+          <div style="display:flex;gap:8px">
+            <button class="btn" id="saveEvent">Save</button>
+            <button class="btn ghost" id="cancelEvent">Cancel</button>
+          </div>
+        </div>`
+      document.getElementById('saveEvent').onclick = ()=>{
+        editing.name = document.getElementById('evtName').value.trim() || 'Untitled Event'
+        editing.date = document.getElementById('evtDate').value || ''
+        editing.location = document.getElementById('evtLoc').value || ''
+        editing.notes = document.getElementById('evtNotes').value || ''
+        const exists = state.events.find(e=>e.id===editing.id)
+        if(exists) state.events = state.events.map(e=>e.id===editing.id?editing:e)
+        else state.events.push(editing)
+        save(); renderTab('events')
+      }
+      document.getElementById('cancelEvent').onclick = ()=>renderTab('events')
+    }
+
+    // TRAININGS
+    function renderTrainings(){
+      panel.innerHTML = `
+        <h2 style="margin-top:0">Training Sessions</h2>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button class="btn" id="btnAddTraining">+ Add Session</button>
+        </div>
+        <div class="list" id="trainingList"></div>
+      `
+      document.getElementById('btnAddTraining').onclick = ()=>openTrainingForm()
+      renderTrainingList()
+    }
+    function renderTrainingList(){
+      const el = document.getElementById('trainingList'); el.innerHTML=''
+      if(state.trainings.length===0) el.innerHTML='<div class="meta">No training sessions yet.</div>'
+      state.trainings.forEach(t=>{
+        const n=document.createElement('div'); n.className='item';
+        n.innerHTML = `<div><div style="font-weight:700">${t.title}</div><div class="meta">${t.date} · ${t.coach||'Coach N/A'}</div></div>
+        <div style="display:flex;gap:8px"><button class="btn" data-id="${t.id}" data-action="edit">Edit</button><button class="btn danger" data-id="${t.id}" data-action="del">Del</button></div>`
+        el.appendChild(n)
+      })
+      el.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+        const id=b.dataset.id; if(b.dataset.action==='edit') openTrainingForm(id); if(b.dataset.action==='del'){state.trainings=state.trainings.filter(x=>x.id!==id);save();renderTrainingList()}
+      })
+    }
+    function openTrainingForm(id){
+      const e = state.trainings.find(x=>x.id===id) || {id:'tr_'+Date.now(),title:'',date:'',coach:'',notes:''}
+      panel.innerHTML = `<h2>${id?'Edit Session':'New Session'}</h2><div style="display:grid;gap:8px">
+        <label>Title<input id="trTitle" value="${escapeHtml(e.title)}"/></label>
+        <div class="row"><div class="col"><label>Date<input id="trDate" type="date" value="${e.date}"/></label></div><div class="col"><label>Coach<input id="trCoach" value="${escapeHtml(e.coach)}"/></label></div></div>
+        <label>Notes<textarea id="trNotes">${escapeHtml(e.notes)}</textarea></label>
+        <div style="display:flex;gap:8px"><button class="btn" id="saveTr">Save</button><button class="btn ghost" id="cancelTr">Cancel</button></div>
+      </div>`
+      document.getElementById('saveTr').onclick=()=>{e.title=document.getElementById('trTitle').value||'Session';e.date=document.getElementById('trDate').value;e.coach=document.getElementById('trCoach').value;e.notes=document.getElementById('trNotes').value; const exists=state.trainings.find(x=>x.id===e.id); if(exists) state.trainings=state.trainings.map(x=>x.id===e.id?e:x); else state.trainings.push(e); save();renderTab('trainings')}
+      document.getElementById('cancelTr').onclick=()=>renderTab('trainings')
+    }
+
+    // RESULTS
+    function renderResults(){
+      panel.innerHTML = `
+        <h2 style="margin-top:0">Results</h2>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button class="btn" id="btnAddResult">Add Result</button>
+        </div>
+        <div class="list" id="resultsList"></div>
+      `
+      document.getElementById('btnAddResult').onclick = ()=>openResultForm()
+      renderResultsList()
+    }
+    function renderResultsList(){
+      const el=document.getElementById('resultsList'); el.innerHTML=''
+      if(state.results.length===0) el.innerHTML='<div class="meta">No results recorded yet.</div>'
+      state.results.forEach(r=>{
+        const n=document.createElement('div'); n.className='item';
+        n.innerHTML = `<div><div style="font-weight:700">${r.eventName || 'Event' } — ${r.participant}</div><div class="meta">${r.metric} : ${r.value}</div></div>
+          <div style="display:flex;gap:8px"><button class="btn" data-id="${r.id}" data-action="edit">Edit</button><button class="btn danger" data-id="${r.id}" data-action="del">Del</button></div>`
+        el.appendChild(n)
+      })
+      el.querySelectorAll('button').forEach(b=>b.onclick=()=>{const id=b.dataset.id; if(b.dataset.action==='edit') openResultForm(id); if(b.dataset.action==='del'){state.results=state.results.filter(x=>x.id!==id);save();renderResultsList()}})
+    }
+    function openResultForm(id){
+      const r = state.results.find(x=>x.id===id) || {id:'res_'+Date.now(),eventId:'',eventName:'',participant:'',metric:'Time',value:''}
+      panel.innerHTML = `<h2>${id?'Edit':'Add'} Result</h2>
+        <div style="display:grid;gap:8px">
+          <label>Event<select id="resEvent">${state.events.map(ev=>`<option value="${ev.id}" ${ev.id===r.eventId? 'selected':''}>${escapeHtml(ev.name)} — ${ev.date}</option>`).join('')}</select></label>
+          <label>Participant<input id="resName" value="${escapeHtml(r.participant)}"/></label>
+          <div class="row"><div class="col"><label>Metric<select id="resMetric"><option>Time</option><option>Score</option><option>Distance</option></select></label></div><div class="col"><label>Value<input id="resValue" value="${escapeHtml(r.value)}"/></label></div></div>
+          <div style="display:flex;gap:8px"><button class="btn" id="saveRes">Save</button><button class="btn ghost" id="cancelRes">Cancel</button></div>
+        </div>`
+      document.getElementById('saveRes').onclick = ()=>{
+        const evId = document.getElementById('resEvent').value || ''
+        const ev = state.events.find(x=>x.id===evId) || {}
+        r.eventId = evId; r.eventName = ev.name || document.getElementById('resEvent').selectedOptions[0]?.text||''
+        r.participant = document.getElementById('resName').value
+        r.metric = document.getElementById('resMetric').value
+        r.value = document.getElementById('resValue').value
+        const exists = state.results.find(x=>x.id===r.id)
+        if(exists) state.results = state.results.map(x=>x.id===r.id?r:x)
+        else state.results.push(r)
+        save(); renderTab('results')
+      }
+      document.getElementById('cancelRes').onclick = ()=>renderTab('results')
+    }
+
+    // Quick actions
+    btnAddEvent.onclick = ()=>{tabs.forEach(x=>x.classList.remove('active')); tabs[0].classList.add('active'); openEventForm()}
+    btnExport.onclick = ()=>exportCSV()
+    btnClear.onclick = ()=>{ if(confirm('Delete all app data? This cannot be undone.')){ state={events:[],trainings:[],results:[]}; save(); renderTab('events'); alert('Cleared.')} }
+    btnImportSample.onclick = ()=>{loadSample();save();renderTab('events')}
+    search.oninput = ()=>{const active = document.querySelector('.tab.active').dataset.tab; renderTab(active)}
+
+    function renderSummary(){
+      const s = summaryList; s.innerHTML=''
+      const ev = document.createElement('div'); ev.innerHTML = `<div style="font-weight:700">Events</div><div class="meta">${state.events.length} total</div>`
+      const tr = document.createElement('div'); tr.innerHTML = `<div style="font-weight:700">Trainings</div><div class="meta">${state.trainings.length} planned</div>`
+      const re = document.createElement('div'); re.innerHTML = `<div style="font-weight:700">Results</div><div class="meta">${state.results.length} recorded</div>`
+      s.appendChild(ev); s.appendChild(tr); s.appendChild(re)
+    }
+
+    // CSV export (events + results)
+    function exportCSV(){
+      let csv = 'type,id,eventId,eventName,title/date,location/coach,participant,metric,value,notes\n'
+      state.events.forEach(e=>{csv += `event,${e.id},,,${quote(e.name)},${quote(e.location)},,,,${quote(e.notes)}\n`})
+      state.trainings.forEach(t=>{csv += `training,${t.id},,,${quote(t.title)},${quote(t.coach)},,,${quote(t.notes)}\n`})
+      state.results.forEach(r=>{csv += `result,${r.id},${r.eventId},${quote(r.eventName)},, ,${quote(r.participant)},${quote(r.metric)},${quote(r.value)},\n`})
+      const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob)
+      const a = document.createElement('a'); a.href=url; a.download='eventprep-export.csv'; a.click(); URL.revokeObjectURL(url)
+    }
+
+    // chart: simple bar chart of top participants by numeric value (works if values are numeric)
+    function drawChart(){
+      const cvs = document.getElementById('resultsChart'); const ctx = cvs.getContext('2d')
+      ctx.clearRect(0,0,cvs.width,cvs.height)
+      if(state.results.length===0){ctx.fillStyle='#8899a6';ctx.font='14px sans-serif';ctx.fillText('No results to chart',20,30);return}
+      // aggregate by participant (take numeric values)
+      const map = {}
+      state.results.forEach(r=>{const num = parseFloat(r.value); if(!isFinite(num)) return; map[r.participant] = (map[r.participant]||0) + num})
+      const data = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,6)
+      if(data.length===0){ctx.fillStyle='#8899a6';ctx.font='14px sans-serif';ctx.fillText('Results found but not numeric (no chart)',20,30);return}
+      const labels = data.map(d=>d[0]); const vals = data.map(d=>d[1])
+      // draw bars
+      const pad=40; const w=cvs.width-2*pad; const h=cvs.height-2*pad
+      const max = Math.max(...vals)
+      const bw = w/labels.length*0.6
+      labels.forEach((lbl,i)=>{
+        const x = pad + i*(w/labels.length) + ((w/labels.length)-bw)/2
+        const barH = (vals[i]/max)* (h-20)
+        const y = pad + (h-barH)
+        ctx.fillStyle='rgba(11,124,255,0.85)'
+        ctx.fillRect(x,y,bw,barH)
+        ctx.fillStyle='#111'; ctx.font='12px sans-serif'; ctx.fillText(lbl.substring(0,12), x, pad+h+14)
+        ctx.fillText(vals[i].toFixed(2), x, y-6)
+      })
+    }
+
+    // helper: open sessions for event
+    function openSessionsForEvent(eventId){
+      const ev = state.events.find(e=>e.id===eventId)
+      panel.innerHTML = `<h2>Sessions for ${escapeHtml(ev.name||'Event')}</h2>
+        <div style="margin-bottom:8px"><button class="btn" id="addSess">+ New Session for this event</button></div>
+        <div class="list" id="sessList"></div>`
+      document.getElementById('addSess').onclick = ()=>{openTrainingForm();}
+      const sessList = document.getElementById('sessList'); sessList.innerHTML=''
+      const related = state.trainings.filter(t=>t.notes && t.notes.includes(ev.id))
+      if(related.length===0) sessList.innerHTML='<div class="meta">No dedicated sessions linked. You can add sessions and mention the event id in notes.</div>'
+      related.forEach(s=>{const n=document.createElement('div');n.className='item';n.innerHTML=`<div><div style="font-weight:700">${s.title}</div><div class="meta">${s.date} · ${s.coach}</div></div>`;sessList.appendChild(n)})
+    }
+
+    // sample dataset
+    function loadSample(){
+      state.events = [
+        {id:'evt1', name:'Inter-School Athletics', date:'2025-01-15', location:'Main Stadium', notes:'Annual meet'},
+        {id:'evt2', name:'City Marathon', date:'2025-03-10', location:'City Center', notes:'Open category'}
+      ]
+      state.trainings = [
+        {id:'tr1', title:'Sprints Practice', date:'2024-12-10', coach:'Coach Ram', notes:'Focus on starts'},
+        {id:'tr2', title:'Endurance Run', date:'2024-12-12', coach:'Coach Priya', notes:'Long run for marathon prep'}
+      ]
+      state.results = [
+        {id:'r1', eventId:'evt1', eventName:'Inter-School Athletics', participant:'A. Kumar', metric:'Time', value:'12.34'},
+        {id:'r2', eventId:'evt1', eventName:'Inter-School Athletics', participant:'S. Mehta', metric:'Time', value:'11.98'},
+        {id:'r3', eventId:'evt2', eventName:'City Marathon', participant:'R. Singh', metric:'Time', value:'135.50'}
+      ]
+    }
+
+    // small utilities
+    function quote(s){ if(!s && s!==0) return ''; return '"'+String(s).replace(/"/g,'""')+'"' }
+    function escapeHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+    // initial load
+    load()
+  </script>
+</body>
+</html>
