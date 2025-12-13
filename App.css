@@ -1,0 +1,188 @@
+/* ================================
+   GLOBAL STYLES
+================================ */
+body {
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: #f4f6f8;
+  color: #333;
+}
+
+.App {
+  padding: 20px;
+}
+
+/* Headings */
+h1, h2, h3 {
+  color: #222;
+  font-weight: 600;
+}
+
+/* Cards */
+.card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+/* Buttons */
+button {
+  padding: 10px 20px;
+  background: #0077ff;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #005ccc;
+}
+
+/* ================================
+   COURSE GRID
+================================ */
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.course-card {
+  background: #fff;
+  padding: 18px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  transition: 0.3s;
+}
+
+.course-card:hover {
+  transform: scale(1.03);
+}
+
+/* ================================
+   VIDEO PLAYER
+================================ */
+.video-container {
+  width: 100%;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 15px;
+}
+
+video {
+  width: 100%;
+  border-radius: 12px;
+}
+
+/* ================================
+   FILE UPLOAD BOX
+================================ */
+.upload-box {
+  border: 3px dashed #0077ff;
+  padding: 25px;
+  border-radius: 12px;
+  text-align: center;
+  color: #0077ff;
+  font-size: 16px;
+  margin-top: 20px;
+}
+
+.upload-box:hover {
+  background: rgba(0, 119, 255, 0.05);
+}
+
+/* ================================
+   PROGRESS BAR
+================================ */
+.progress-container {
+  margin-top: 20px;
+}
+
+.progress-bar {
+  width: 100%;
+  background: #ddd;
+  height: 12px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #28a745;
+  width: 0%;
+  transition: width 0.5s ease-in-out;
+}
+
+/* ================================
+   QUIZ BOX
+================================ */
+.quiz-box {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+}
+
+.quiz-option {
+  padding: 12px;
+  margin: 8px 0;
+  border: 2px solid #bbb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.quiz-option:hover {
+  background: #eaf3ff;
+  border-color: #0077ff;
+}
+
+.quiz-option.correct {
+  border-color: green;
+  background: #c7f5c4;
+}
+
+.quiz-option.wrong {
+  border-color: red;
+  background: #ffd2d2;
+}
+
+/* ================================
+   CERTIFICATE DESIGN
+================================ */
+.certificate {
+  padding: 40px;
+  background: white;
+  border: 5px solid #0077ff;
+  width: 80%;
+  margin: 30px auto;
+  text-align: center;
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.certificate h1 {
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+
+.certificate p {
+  font-size: 18px;
+}
+
+/* ================================
+   FOOTER
+================================ */
+.footer {
+  text-align: center;
+  margin-top: 50px;
+  padding: 15px 0;
+  font-size: 14px;
+  color: #666;
+}
